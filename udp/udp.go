@@ -1,5 +1,6 @@
 // Copyright 2019 Path Network, Inc. All rights reserved.
 // Copyright 2024 Konrad Zemek <konrad.zemek@gmail.com>
+// Copyright 2025 Dream Server <dream@dreamsv.xyz>
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -15,9 +16,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kzemek/go-mmproxy/buffers"
-	"github.com/kzemek/go-mmproxy/proxyprotocol"
-	"github.com/kzemek/go-mmproxy/utils"
+	"github.com/DaybreakLabs/go-mmproxy/buffers"
+	"github.com/DaybreakLabs/go-mmproxy/proxyprotocol"
+	"github.com/DaybreakLabs/go-mmproxy/utils"
 )
 
 type connection struct {

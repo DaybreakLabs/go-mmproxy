@@ -7,7 +7,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/kzemek/go-mmproxy/buffers"
+	"github.com/DaybreakLabs/go-mmproxy/buffers"
 )
 
 func TestGetGetsAPutBuffer(t *testing.T) {

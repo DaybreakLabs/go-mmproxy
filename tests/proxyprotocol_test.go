@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/kzemek/go-mmproxy/proxyprotocol"
-	"github.com/kzemek/go-mmproxy/utils"
+	"github.com/DaybreakLabs/go-mmproxy/proxyprotocol"
+	"github.com/DaybreakLabs/go-mmproxy/utils"
 )
 
 func TestProxyProtocolV1(t *testing.T) {

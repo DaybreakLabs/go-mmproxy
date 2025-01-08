@@ -12,9 +12,9 @@ import (
 	"net"
 	"net/netip"
 
-	"github.com/kzemek/go-mmproxy/buffers"
-	"github.com/kzemek/go-mmproxy/proxyprotocol"
-	"github.com/kzemek/go-mmproxy/utils"
+	"github.com/DaybreakLabs/go-mmproxy/buffers"
+	"github.com/DaybreakLabs/go-mmproxy/proxyprotocol"
+	"github.com/DaybreakLabs/go-mmproxy/utils"
 )
 
 func copyData(dst net.Conn, src net.Conn, ch chan<- error) {

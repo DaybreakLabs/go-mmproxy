@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kzemek/go-mmproxy/tcp"
-	"github.com/kzemek/go-mmproxy/utils"
+	"github.com/DaybreakLabs/go-mmproxy/tcp"
+	"github.com/DaybreakLabs/go-mmproxy/utils"
 )
 
 type listenResult struct {

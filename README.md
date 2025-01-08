@@ -1,8 +1,8 @@
 # go-mmproxy
 
-[![CI](https://github.com/kzemek/go-mmproxy/actions/workflows/test.yml/badge.svg)](https://github.com/kzemek/go-mmproxy/actions/workflows/test.yml)
-[![Release](https://img.shields.io/github/v/release/kzemek/go-mmproxy)](https://github.com/kzemek/go-mmproxy/releases/latest)
-[![License](https://img.shields.io/github/license/kzemek/go-mmproxy)](https://github.com/kzemek/go-mmproxy/blob/master/LICENSE)
+[![CI](https://github.com/DaybreakLabs/go-mmproxy/actions/workflows/test.yml/badge.svg)](https://github.com/DaybreakLabs/go-mmproxy/actions/workflows/test.yml)
+[![Release](https://img.shields.io/github/v/release/kzemek/go-mmproxy)](https://github.com/DaybreakLabs/go-mmproxy/releases/latest)
+[![License](https://img.shields.io/github/license/kzemek/go-mmproxy)](https://github.com/DaybreakLabs/go-mmproxy/blob/master/LICENSE)
 
 This is a Go reimplementation of [mmproxy](https://github.com/cloudflare/mmproxy), created to improve on mmproxy's runtime stability while providing potentially greater performance in terms of connection and packet throughput.
 
@@ -12,7 +12,7 @@ Because they share basic mechanisms, [Cloudflare's blogpost on mmproxy](https://
 ## Building
 
 ```shell
-go install github.com/kzemek/go-mmproxy@latest
+go install github.com/DaybreakLabs/go-mmproxy@latest
 ```
 
 You'll need at least `go 1.21` to build the `go-mmproxy` binary.
@@ -26,7 +26,7 @@ See [Go's Getting Started](https://golang.org/doc/install) if your package manag
 - as root or with `CAP_NET_ADMIN` capability to be able to set `IP_TRANSPARENT` socket opt.
 
 <sup>1</sup> This is not a hard requirement, and with routing magic go-mmproxy can be ran on a different host than the target(s).
-See the [docker-example directory](https://github.com/kzemek/go-mmproxy/tree/main/docker-example) for a working example.
+See the [docker-example directory](https://github.com/DaybreakLabs/go-mmproxy/tree/main/docker-example) for a working example.
 
 ## Running
 
@@ -88,7 +88,7 @@ sudo ./go-mmproxy -l 0.0.0.0:25577 -4 127.0.0.1:25578 -6 [::1]:25578 --allowed-s
 
 ### Docker examples
 
-You can find an example Dockerfile and a Docker Compose setup in the [docker-example directory](https://github.com/kzemek/go-mmproxy/tree/main/docker-example).
+You can find an example Dockerfile and a Docker Compose setup in the [docker-example directory](https://github.com/DaybreakLabs/go-mmproxy/tree/main/docker-example).
 
 ## Benchmark
 

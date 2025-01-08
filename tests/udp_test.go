@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kzemek/go-mmproxy/udp"
-	"github.com/kzemek/go-mmproxy/utils"
+	"github.com/DaybreakLabs/go-mmproxy/udp"
+	"github.com/DaybreakLabs/go-mmproxy/utils"
 )
 
 func runUDPServer(t *testing.T, addr string, receivedData chan<- listenResult) {
