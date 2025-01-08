@@ -165,19 +165,10 @@ func Listen(ctx context.Context, listenConfig *net.ListenConfig, opts *utils.Opt
 			continue
 		}
 
-		var saddr, daddr netip.AddrPort
-		var restBytes []byte
-
-		if conn, exists := connectionMap[remoteAddr]; !exists {
-			saddr, daddr, restBytes, err = proxyprotocol.ReadRemoteAddr(buffer[:n], utils.UDP)
-			if err != nil {
-				logger.Debug("failed to parse PROXY header", "error", err, slog.String("remoteAddr", remoteAddr.String()))
-				continue
-			}
-		} else {
-			restBytes = buffer[:n]
-			saddr = conn.clientAddr
-			daddr = conn.downstreamAddr
+		saddr, daddr, restBytes, err := proxyprotocol.ReadRemoteAddr(buffer[:n], utils.UDP)
+		if err != nil {
+			logger.Debug("failed to parse PROXY header", "error", err, slog.String("remoteAddr", remoteAddr.String()))
+			continue
 		}
 
 		for {
