@@ -15,6 +15,72 @@ import (
 	"github.com/DaybreakLabs/go-mmproxy/utils"
 )
 
+// isIPv4MappedIPv6 checks if an address is in the IPv4-mapped IPv6 format (::ffff:IPv4)
+func isIPv4MappedIPv6(addr []byte) bool {
+	return len(addr) >= 16 && addr[10] == 0xff && addr[11] == 0xff
+}
+
+func readRemoteAddrSPP(ctrlBuf []byte) (saddr, daddr netip.AddrPort, data []byte, resultErr error) {
+	// Ensure the buffer is large enough for the SPP header (38 bytes)
+	if len(ctrlBuf) < 38 {
+		resultErr = fmt.Errorf("incomplete SPP header")
+		return
+	}
+
+	// Validate the magic number (0x56EC)
+	magic := binary.BigEndian.Uint16(ctrlBuf[:2])
+	if magic != 0x56EC {
+		resultErr = fmt.Errorf("invalid magic number 0x%X", magic)
+		return
+	}
+
+	// Extract the client and target addresses
+	clientAddrBytes := ctrlBuf[2:18]
+	targetAddrBytes := ctrlBuf[18:34]
+	clientPort := binary.BigEndian.Uint16(ctrlBuf[34:36])
+	targetPort := binary.BigEndian.Uint16(ctrlBuf[36:38])
+
+	// Convert client and target addresses to netip.Addr
+	var clientIP, targetIP netip.Addr
+
+	// Check if the client address is IPv4-mapped IPv6
+	if isIPv4MappedIPv6(clientAddrBytes) {
+		// IPv4-mapped IPv6 address, take the last 4 bytes as an IPv4 address
+		clientIP, _ = netip.AddrFromSlice(clientAddrBytes[12:])
+	} else {
+		// Otherwise, treat as IPv6 address
+		clientIP, _ = netip.AddrFromSlice(clientAddrBytes)
+	}
+
+	// Check if the target address is IPv4-mapped IPv6
+	if isIPv4MappedIPv6(targetAddrBytes) {
+		// IPv4-mapped IPv6 address, take the last 4 bytes as an IPv4 address
+		targetIP, _ = netip.AddrFromSlice(targetAddrBytes[12:])
+	} else {
+		// Otherwise, treat as IPv6 address
+		targetIP, _ = netip.AddrFromSlice(targetAddrBytes)
+	}
+
+	// Validate that client and target addresses are valid IPv4 or IPv6
+	if !clientIP.Is4() && !clientIP.Is6() {
+		resultErr = fmt.Errorf("client address is not valid IPv4 or IPv6")
+		return
+	}
+	if !targetIP.Is4() && !targetIP.Is6() {
+		resultErr = fmt.Errorf("target address is not valid IPv4 or IPv6")
+		return
+	}
+
+	// Construct AddrPort from the client and target addresses and ports
+	saddr = netip.AddrPortFrom(clientIP, clientPort)
+	daddr = netip.AddrPortFrom(targetIP, targetPort)
+
+	// Data follows after the header (38 bytes)
+	data = ctrlBuf[38:]
+
+	return
+}
+
 func readRemoteAddrPROXYv2(ctrlBuf []byte, protocol utils.Protocol) (saddr, daddr netip.AddrPort, data []byte, resultErr error) {
 	if (ctrlBuf[12] >> 4) != 2 {
 		resultErr = fmt.Errorf("unknown protocol version %d", ctrlBuf[12]>>4)
@@ -153,6 +219,13 @@ func readRemoteAddrPROXYv1(ctrlBuf []byte) (saddr, daddr netip.AddrPort, data []
 var proxyv2header = []byte{0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A}
 
 func ReadRemoteAddr(buf []byte, protocol utils.Protocol) (saddr, daddr netip.AddrPort, rest []byte, err error) {
+	if protocol == utils.UDP && len(buf) >= 38 {
+		saddr, daddr, rest, err = readRemoteAddrSPP(buf)
+		if err != nil {
+			err = fmt.Errorf("failed to parse SPP header: %w", err)
+		}
+		return
+	}
 	if len(buf) >= 16 && bytes.Equal(buf[:12], proxyv2header) {
 		saddr, daddr, rest, err = readRemoteAddrPROXYv2(buf, protocol)
 		if err != nil {
