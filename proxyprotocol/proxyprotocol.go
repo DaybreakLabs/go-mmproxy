@@ -224,8 +224,11 @@ func ReadRemoteAddr(buf []byte, protocol utils.Protocol) (saddr, daddr netip.Add
 		if err != nil {
 			err = fmt.Errorf("failed to parse SPP header: %w", err)
 		}
-		// Ignore if failed to parse SPP header
+		if err == nil {
+			return
+		}
 	}
+
 	if len(buf) >= 16 && bytes.Equal(buf[:12], proxyv2header) {
 		saddr, daddr, rest, err = readRemoteAddrPROXYv2(buf, protocol)
 		if err != nil {
