@@ -52,7 +52,7 @@ func handleConnection(conn net.Conn, opts *utils.Options, logger *slog.Logger) {
 		return
 	}
 
-	saddr, daddr, restBytes, err := proxyprotocol.ReadRemoteAddr(buffer[:n], utils.TCP)
+	saddr, daddr, restBytes, err, _ := proxyprotocol.ReadRemoteAddr(buffer[:n], utils.TCP)
 	if err != nil {
 		logger.Debug("failed to parse PROXY header", "error", err, slog.Bool("dropConnection", true))
 		return

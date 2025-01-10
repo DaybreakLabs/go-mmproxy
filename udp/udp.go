@@ -41,7 +41,7 @@ func closeAfterInactivity(conn *connection, closeAfter time.Duration, socketClos
 	socketClosures <- conn.clientAddr
 }
 
-func copyFromUpstream(downstream net.PacketConn, conn *connection) {
+func copyFromUpstream(downstream net.PacketConn, conn *connection, hed []byte) {
 	rawConn, err := conn.upstream.SyscallConn()
 	if err != nil {
 		conn.logger.Error("failed to retrieve raw connection from upstream socket", "error", err)
@@ -53,7 +53,6 @@ func copyFromUpstream(downstream net.PacketConn, conn *connection) {
 	err = rawConn.Read(func(fd uintptr) bool {
 		buf := buffers.Get()
 		defer buffers.Put(buf)
-
 		for {
 			n, _, serr := syscall.Recvfrom(int(fd), buf, syscall.MSG_DONTWAIT)
 			if errors.Is(serr, syscall.EWOULDBLOCK) {
@@ -66,10 +65,8 @@ func copyFromUpstream(downstream net.PacketConn, conn *connection) {
 			if n == 0 {
 				return true
 			}
-
 			atomic.AddInt64(conn.lastActivity, 1)
-
-			if _, serr := downstream.WriteTo(buf[:n], net.UDPAddrFromAddrPort(conn.downstreamAddr)); serr != nil {
+			if _, serr := downstream.WriteTo(append(hed, buf[:n]...), net.UDPAddrFromAddrPort(conn.downstreamAddr)); serr != nil {
 				syscallErr = serr
 				return true
 			}
@@ -85,7 +82,7 @@ func copyFromUpstream(downstream net.PacketConn, conn *connection) {
 }
 
 func getSocketFromMap(downstream net.PacketConn, opts *utils.Options, downstreamAddr, saddr, daddr netip.AddrPort,
-	logger *slog.Logger, connMap map[netip.AddrPort]*connection, socketClosures chan<- netip.AddrPort) (*connection, error) {
+	logger *slog.Logger, connMap map[netip.AddrPort]*connection, socketClosures chan<- netip.AddrPort, hed []byte) (*connection, error) {
 	if conn := connMap[saddr]; conn != nil {
 		atomic.AddInt64(conn.lastActivity, 1)
 		return conn, nil
@@ -128,7 +125,7 @@ func getSocketFromMap(downstream net.PacketConn, opts *utils.Options, downstream
 		clientAddr:     saddr,
 		downstreamAddr: downstreamAddr}
 
-	go copyFromUpstream(downstream, udpConn)
+	go copyFromUpstream(downstream, udpConn, hed)
 	go closeAfterInactivity(udpConn, opts.UDPCloseAfter, socketClosures)
 
 	connMap[saddr] = udpConn
@@ -165,7 +162,7 @@ func Listen(ctx context.Context, listenConfig *net.ListenConfig, opts *utils.Opt
 			continue
 		}
 
-		saddr, daddr, restBytes, err := proxyprotocol.ReadRemoteAddr(buffer[:n], utils.UDP)
+		saddr, daddr, restBytes, err, hed := proxyprotocol.ReadRemoteAddr(buffer[:n], utils.UDP)
 		if err != nil {
 			logger.Debug("failed to parse PROXY header", "error", err, slog.String("remoteAddr", remoteAddr.String()))
 			continue
@@ -184,7 +181,7 @@ func Listen(ctx context.Context, listenConfig *net.ListenConfig, opts *utils.Opt
 			}
 		}
 
-		conn, err := getSocketFromMap(ln, opts, remoteAddr, saddr, daddr, logger, connectionMap, socketClosures)
+		conn, err := getSocketFromMap(ln, opts, remoteAddr, saddr, daddr, logger, connectionMap, socketClosures, hed)
 		if err != nil {
 			continue
 		}

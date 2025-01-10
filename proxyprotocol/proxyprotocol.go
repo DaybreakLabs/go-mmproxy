@@ -20,7 +20,7 @@ func isIPv4MappedIPv6(addr []byte) bool {
 	return len(addr) >= 16 && addr[10] == 0xff && addr[11] == 0xff
 }
 
-func readRemoteAddrSPP(ctrlBuf []byte) (saddr, daddr netip.AddrPort, data []byte, resultErr error) {
+func readRemoteAddrSPP(ctrlBuf []byte) (saddr, daddr netip.AddrPort, data []byte, resultErr error, hed []byte) {
 	// Ensure the buffer is large enough for the SPP header (38 bytes)
 	if len(ctrlBuf) < 38 {
 		resultErr = fmt.Errorf("incomplete SPP header")
@@ -77,11 +77,11 @@ func readRemoteAddrSPP(ctrlBuf []byte) (saddr, daddr netip.AddrPort, data []byte
 
 	// Data follows after the header (38 bytes)
 	data = ctrlBuf[38:]
-
+	hed = ctrlBuf[:38]
 	return
 }
 
-func readRemoteAddrPROXYv2(ctrlBuf []byte, protocol utils.Protocol) (saddr, daddr netip.AddrPort, data []byte, resultErr error) {
+func readRemoteAddrPROXYv2(ctrlBuf []byte, protocol utils.Protocol) (saddr, daddr netip.AddrPort, data []byte, resultErr error, hed []byte) {
 	if (ctrlBuf[12] >> 4) != 2 {
 		resultErr = fmt.Errorf("unknown protocol version %d", ctrlBuf[12]>>4)
 		return
@@ -150,10 +150,11 @@ func readRemoteAddrPROXYv2(ctrlBuf []byte, protocol utils.Protocol) (saddr, dadd
 	saddr = netip.AddrPortFrom(srcIP, sport)
 	daddr = netip.AddrPortFrom(dstIP, dport)
 	data = ctrlBuf[16+dataLen:]
+	hed = nil
 	return
 }
 
-func readRemoteAddrPROXYv1(ctrlBuf []byte) (saddr, daddr netip.AddrPort, data []byte, resultErr error) {
+func readRemoteAddrPROXYv1(ctrlBuf []byte) (saddr, daddr netip.AddrPort, data []byte, resultErr error, hed []byte) {
 	str := string(ctrlBuf)
 	idx := strings.Index(str, "\r\n")
 	if idx < 0 {
@@ -213,14 +214,15 @@ func readRemoteAddrPROXYv1(ctrlBuf []byte) (saddr, daddr netip.AddrPort, data []
 	saddr = netip.AddrPortFrom(srcIP, uint16(sport))
 	daddr = netip.AddrPortFrom(dstIP, uint16(dport))
 	data = ctrlBuf[idx+2:]
+	hed = nil // Daybreaklabs - Simple Proxy Protocol Implement
 	return
 }
 
 var proxyv2header = []byte{0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A}
 
-func ReadRemoteAddr(buf []byte, protocol utils.Protocol) (saddr, daddr netip.AddrPort, rest []byte, err error) {
+func ReadRemoteAddr(buf []byte, protocol utils.Protocol) (saddr, daddr netip.AddrPort, rest []byte, err error, hed []byte) {
 	if protocol == utils.UDP && len(buf) >= 38 {
-		saddr, daddr, rest, err = readRemoteAddrSPP(buf)
+		saddr, daddr, rest, err, hed = readRemoteAddrSPP(buf)
 		if err != nil {
 			err = fmt.Errorf("failed to parse SPP header: %w", err)
 		}
@@ -230,7 +232,7 @@ func ReadRemoteAddr(buf []byte, protocol utils.Protocol) (saddr, daddr netip.Add
 	}
 
 	if len(buf) >= 16 && bytes.Equal(buf[:12], proxyv2header) {
-		saddr, daddr, rest, err = readRemoteAddrPROXYv2(buf, protocol)
+		saddr, daddr, rest, err, hed = readRemoteAddrPROXYv2(buf, protocol)
 		if err != nil {
 			err = fmt.Errorf("failed to parse PROXY v2 header: %w", err)
 		}
@@ -239,7 +241,7 @@ func ReadRemoteAddr(buf []byte, protocol utils.Protocol) (saddr, daddr netip.Add
 
 	// PROXYv1 only works with TCP
 	if protocol == utils.TCP && len(buf) >= 8 && bytes.Equal(buf[:5], []byte("PROXY")) {
-		saddr, daddr, rest, err = readRemoteAddrPROXYv1(buf)
+		saddr, daddr, rest, err, hed = readRemoteAddrPROXYv1(buf)
 		if err != nil {
 			err = fmt.Errorf("failed to parse PROXY v1 header: %w", err)
 		}
